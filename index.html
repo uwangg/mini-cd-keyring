@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>나만의 초미니 CD 키링 만들기 (가이드라인 토글형)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<style>
+  body { font-family: 'Malgun Gothic', sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+  
+  /* 설정 패널 */
+  .control-panel { 
+    background: #e9ecef; padding: 20px; border-radius: 8px; margin-bottom: 20px; 
+    max-width: 210mm; margin: 0 auto 20px auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  .control-panel h3 { margin-top: 0; margin-bottom: 15px; color: #333; }
+  .control-group { margin-bottom: 15px; border-bottom: 1px solid #ccc; padding-bottom: 15px; }
+  .control-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .control-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; }
+  .control-item { display: flex; flex-direction: column; font-size: 13px; font-weight: bold; background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #ddd; }
+  .control-item input[type="file"] { margin-top: 8px; font-size: 11px; cursor: pointer; max-width: 160px; }
+  .control-item input[type="color"] { margin-top: 5px; cursor: pointer; width: 40px; height: 30px; padding: 0; border: 1px solid #aaa; }
+  .crop-btn { margin-top: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: #2c3e50; color: white; border: none; border-radius: 4px; font-weight: bold; }
+  .crop-btn:hover { background: #1a252f; }
+
+  /* 토글 버튼 강조 스타일 */
+  .toggle-item { background: #d4edda; border-color: #c3e6cb; color: #155724; align-items: center; justify-content: center; flex-direction: row; cursor: pointer; }
+  .toggle-item input[type="checkbox"] { margin-right: 8px; width: 18px; height: 18px; cursor: pointer; }
+
+  /* 도안 페이지 */
+  .page { background: white; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+  h2 { border-bottom: 2px solid #333; padding-bottom: 10px; margin-top: 0; font-size: 18px; }
+  .item { margin-bottom: 40px; }
+  p { font-weight: bold; margin-bottom: 6px; font-size: 14px; color: #111; }
+  .desc { font-weight: normal; font-size: 12px; color: #444; margin-top: 0; margin-bottom: 15px; }
+  
+  /* 크롭 모달창 스타일 */
+  #crop-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; }
+  .modal-content { width: 90%; max-width: 600px; margin: 40px auto; background: #fff; padding: 20px; border-radius: 8px; }
+  .img-container { max-height: 60vh; overflow: hidden; background: #eee; text-align: center; margin-bottom: 20px; }
+  .img-container img { max-width: 100%; display: block; }
+  .modal-actions { text-align: right; }
+  .modal-actions button { padding: 8px 20px; font-size: 14px; cursor: pointer; margin-left: 10px; border-radius: 4px; font-weight: bold; }
+  #btn-cancel { background: #ccc; border: none; color: #333; }
+  #btn-apply { background: #e74c3c; border: none; color: white; }
+
+  /* 강제 인쇄 설정 */
+  @media print {
+    body { background: none; padding: 0; }
+    .control-panel, #crop-modal { display: none !important; }
+    .page { width: 100%; min-height: auto; padding: 0; margin: 0; box-shadow: none; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="control-panel">
+  <h3>🛠️ 이미지 업로드 & 디스플레이 설정</h3>
+  
+  <div class="control-group">
+    <div style="margin-bottom:10px; font-weight:bold; color:#0056b3;">1. 보기 설정 (인쇄 전 확인용)</div>
+    <div class="control-row">
+      <label class="control-item toggle-item">
+        <input type="checkbox" id="toggle-guidelines" checked> 
+        <span>✂️ 까만 테두리(가이드라인) 및 글씨 켜기/끄기</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <div style="margin-bottom:10px; font-weight:bold; color:#0056b3;">2. CD 앞면</div>
+    <div class="control-row">
+      <div class="control-item">
+        <label>안쪽 (2.8cm)</label>
+        <input type="file" id="upload-front-in" accept="image/*">
+        <button class="crop-btn" data-img="img-front-in" data-ratio="28/27">✂️ 비율맞춤 크롭</button>
+      </div>
+      <div class="control-item">
+        <label>바깥쪽 (2.8cm)</label>
+        <input type="file" id="upload-front-out" accept="image/*">
+        <button class="crop-btn" data-img="img-front-out" data-ratio="28/27">✂️ 비율맞춤 크롭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <div style="margin-bottom:10px; font-weight:bold; color:#0056b3;">3. CD 뒷면 & 접힘 구역</div>
+    <div class="control-row">
+      <div class="control-item">
+        <label>바깥쪽 (3.1cm)</label>
+        <input type="file" id="upload-back-out" accept="image/*">
+        <button class="crop-btn" data-img="img-back-out" data-ratio="31/24">✂️ 비율맞춤 크롭</button>
+      </div>
+      <div class="control-item" style="background:#fff3cd; border-color:#ffeeba;">
+        <label>접힘 (0.9cm) - 색상 OR 이미지</label>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="color" id="color-back-fold" value="#eccc68" title="색상 변경">
+          <input type="file" id="upload-back-fold" accept="image/*" style="max-width:110px;">
+        </div>
+        <button class="crop-btn" data-img="img-back-fold" data-ratio="9/24">✂️ 비율맞춤 크롭</button>
+      </div>
+      <div class="control-item">
+        <label>안쪽 (2.8cm)</label>
+        <input type="file" id="upload-back-in" accept="image/*">
+        <button class="crop-btn" data-img="img-back-in" data-ratio="28/24">✂️ 비율맞춤 크롭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <div style="margin-bottom:10px; font-weight:bold; color:#0056b3;">4. CD 원형</div>
+    <div class="control-row">
+      <div class="control-item">
+        <label>알판 (2.4cm)</label>
+        <input type="file" id="upload-cd" accept="image/*">
+        <button class="crop-btn" data-img="img-cd" data-ratio="1/1">✂️ 비율맞춤 크롭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <h2>💿 초미니 CD 키링 맞춤 도안</h2>
+  
+  <div class="item">
+    <p>1. CD 앞면 (5.6cm x 2.7cm)</p>
+    <svg width="58mm" height="29mm" viewBox="-1 -1 58 29" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <rect x="0" y="0" width="28" height="27" fill="#33b5e5"/>
+      <rect x="28" y="0" width="28" height="27" fill="#ff6b81"/>
+      <image id="img-front-in" x="0" y="0" width="28" height="27" preserveAspectRatio="xMidYMid slice" />
+      <image id="img-front-out" x="28" y="0" width="28" height="27" preserveAspectRatio="xMidYMid slice" />
+      
+      <g class="guidelines-layer">
+        <text id="txt-front-in" x="14" y="13.5" font-size="3.5" fill="black" font-weight="bold" text-anchor="middle" dominant-baseline="middle">안쪽(2.8)</text>
+        <text id="txt-front-out" x="42" y="13.5" font-size="3.5" fill="black" font-weight="bold" text-anchor="middle" dominant-baseline="middle">바깥쪽(2.8)</text>
+        <g fill="none" stroke="#222222" stroke-width="0.3">
+          <rect x="0" y="0" width="28" height="27"/>
+          <rect x="28" y="0" width="28" height="27"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="item">
+    <p>2. CD 뒷면 (6.8cm x 2.4cm)</p>
+    <svg width="70mm" height="26mm" viewBox="-1 -1 70 26" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <rect x="0" y="0" width="31" height="24" fill="#ffa502"/>
+      <rect id="rect-back-fold" x="31" y="0" width="9" height="24" fill="#eccc68"/>
+      <rect x="40" y="0" width="28" height="24" fill="#7bed9f"/>
+      
+      <image id="img-back-out" x="0" y="0" width="31" height="24" preserveAspectRatio="xMidYMid slice" />
+      <image id="img-back-fold" x="31" y="0" width="9" height="24" preserveAspectRatio="xMidYMid slice" display="none" />
+      <image id="img-back-in" x="40" y="0" width="28" height="24" preserveAspectRatio="xMidYMid slice" />
+      
+      <g class="guidelines-layer">
+        <text id="txt-back-out" x="15.5" y="12" font-size="3.5" fill="black" font-weight="bold" text-anchor="middle" dominant-baseline="middle">바깥쪽(3.1)</text>
+        <text id="txt-back-fold" x="35.5" y="12" font-size="2.5" fill="black" font-weight="bold" text-anchor="middle" dominant-baseline="middle">접힘</text>
+        <text id="txt-back-in" x="54" y="12" font-size="3.5" fill="black" font-weight="bold" text-anchor="middle" dominant-baseline="middle">안쪽(2.8)</text>
+
+        <g fill="none" stroke="#222222" stroke-width="0.3">
+          <rect x="0" y="0" width="31" height="24"/>
+          <rect x="31" y="0" width="9" height="24"/>
+          <rect x="40" y="0" width="28" height="24"/>
+        </g>
+        <line x1="34" y1="0" x2="34" y2="24" stroke="#222222" stroke-width="0.3" stroke-dasharray="1.5,1.5" />
+        <line x1="37" y1="0" x2="37" y2="24" stroke="#222222" stroke-width="0.3" stroke-dasharray="1.5,1.5" />
+      </g>
+    </svg>
+  </div>
+
+  <div class="item">
+    <p>3. CD 원형 알판 (지름 2.4cm)</p>
+    <svg width="26mm" height="26mm" viewBox="-1 -1 26 26" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <defs>
+        <clipPath id="circle-clip"><circle cx="12" cy="12" r="12" /></clipPath>
+      </defs>
+      <circle cx="12" cy="12" r="12" fill="#9b59b6" />
+      <image id="img-cd" x="0" y="0" width="24" height="24" clip-path="url(#circle-clip)" preserveAspectRatio="xMidYMid slice" />
+      
+      <g class="guidelines-layer">
+        <text id="txt-cd" x="12" y="7.5" font-size="2.5" fill="black" font-weight="bold" text-anchor="middle">CD</text>
+        <circle cx="12" cy="12" r="12" fill="none" stroke="#222222" stroke-width="0.3"/>
+        <circle cx="12" cy="12" r="2.5" fill="white" stroke="#222222" stroke-width="0.3"/>
+      </g>
+      <circle cx="12" cy="12" r="2.5" fill="white" />
+    </svg>
+  </div>
+</div>
+
+<div id="crop-modal">
+  <div class="modal-content">
+    <h3 style="margin-top:0;">✂️ 이미지 영역 지정하기</h3>
+    <p style="font-size:13px; color:#555;">밝은 사각형 영역을 움직여 도안에 들어갈 부분을 맞춰주세요.</p>
+    <div class="img-container">
+      <img id="image-to-crop" src="">
+    </div>
+    <div class="modal-actions">
+      <button id="btn-cancel">취소</button>
+      <button id="btn-apply">적용하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 0. 가이드라인 토글 기능
+  document.getElementById('toggle-guidelines').addEventListener('change', function(e) {
+    const guidelines = document.querySelectorAll('.guidelines-layer');
+    guidelines.forEach(layer => {
+      layer.style.display = e.target.checked ? 'inline' : 'none';
+    });
+  });
+
+  // 업로드한 원본 이미지를 저장할 객체
+  const originalImages = {};
+  let cropper = null;
+  let currentTargetId = null;
+
+  // 파일 업로드 처리
+  function handleUpload(inputId, imgId, txtId) {
+    document.getElementById(inputId).addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const dataUrl = event.target.result;
+          originalImages[imgId] = dataUrl; // 원본 저장
+          
+          // SVG에 자동 적용 (비율 유지 자동 자르기)
+          const svgImg = document.getElementById(imgId);
+          svgImg.setAttributeNS('http://www.w3.org/1999/xlink', 'href', dataUrl);
+          svgImg.setAttribute('href', dataUrl);
+          svgImg.style.display = 'inline'; // 접힘 구역을 위해 활성화
+          
+          if (txtId) document.getElementById(txtId).style.display = 'none';
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // 각 파트 매핑
+  handleUpload('upload-front-in', 'img-front-in', 'txt-front-in');
+  handleUpload('upload-front-out', 'img-front-out', 'txt-front-out');
+  handleUpload('upload-back-out', 'img-back-out', 'txt-back-out');
+  handleUpload('upload-back-fold', 'img-back-fold', 'txt-back-fold');
+  handleUpload('upload-back-in', 'img-back-in', 'txt-back-in');
+  handleUpload('upload-cd', 'img-cd', 'txt-cd');
+
+  // 접힘 구역 색상 변경 처리 (이미지가 있으면 가리고 색상 표시)
+  document.getElementById('color-back-fold').addEventListener('input', function(e) {
+    document.getElementById('rect-back-fold').setAttribute('fill', e.target.value);
+    document.getElementById('img-back-fold').style.display = 'none'; // 이미지 숨김
+    if(!document.getElementById('img-back-fold').getAttribute('href')) {
+      document.getElementById('txt-back-fold').style.display = 'inline';
+    }
+  });
+
+  // 크롭 버튼 클릭 시 모달 열기
+  document.querySelectorAll('.crop-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const imgId = this.dataset.img;
+      const ratioStr = this.dataset.ratio.split('/');
+      const aspectRatio = parseFloat(ratioStr[0]) / parseFloat(ratioStr[1]);
+
+      if (!originalImages[imgId]) {
+        alert('먼저 이미지를 파일 선택으로 업로드해주세요!');
+        return;
+      }
+
+      currentTargetId = imgId;
+      const modal = document.getElementById('crop-modal');
+      const imageToCrop = document.getElementById('image-to-crop');
+      
+      imageToCrop.src = originalImages[imgId];
+      modal.style.display = 'block';
+
+      if (cropper) cropper.destroy();
+      cropper = new Cropper(imageToCrop, {
+        aspectRatio: aspectRatio,
+        viewMode: 1,
+        autoCropArea: 1,
+        dragMode: 'move'
+      });
+    });
+  });
+
+  // 모달 닫기
+  document.getElementById('btn-cancel').addEventListener('click', function() {
+    document.getElementById('crop-modal').style.display = 'none';
+    if (cropper) { cropper.destroy(); cropper = null; }
+  });
+
+  // 크롭 적용
+  document.getElementById('btn-apply').addEventListener('click', function() {
+    if (!cropper || !currentTargetId) return;
+    
+    const croppedCanvas = cropper.getCroppedCanvas();
+    const croppedDataUrl = croppedCanvas.toDataURL();
+    
+    const svgImg = document.getElementById(currentTargetId);
+    svgImg.setAttributeNS('http://www.w3.org/1999/xlink', 'href', croppedDataUrl);
+    svgImg.setAttribute('href', croppedDataUrl);
+    
+    document.getElementById('crop-modal').style.display = 'none';
+    cropper.destroy();
+    cropper = null;
+  });
+</script>
+
+</body>
+</html>
